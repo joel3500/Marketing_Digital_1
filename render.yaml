@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: marketing-chat
+    name: marketing_digital_1
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
@@ -9,5 +9,9 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        # laisse vide ici ; on le connectera après au Postgres Render
-        value: ""
+        fromDatabase:
+          name: marketing_chat_p
+          property: connectionString
+databases:
+  - name: marketing_chat_p
+    plan: free

@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: marketing-chat
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -k eventlet -w 1 -b 0.0.0.0:$PORT app:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        # laisse vide ici ; on le connectera après au Postgres Render
+        value: ""

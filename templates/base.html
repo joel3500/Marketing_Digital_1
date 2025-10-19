@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chat avec les Responsables Marketing</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poppins|Sofia|Trirong|Audiowide">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poppins&effect=fire|neon|outline|emboss|shadow-multiple"> 
+  <script defer src="https://pyscript.net/alpha/pyscript.js"></script>
+</head>
+
+<body>
+
+  <h2> Les Responsables Marketing <br><br>
+       GYMNASE INTELLIGENT A DOMICILE
+  </h2>
+
+  <header class="header_avec_image">
+  </header>
+
+  <div class="grand_cadre_du_chat">
+      <main class="container">
+      {% block content %}{% endblock %}
+      </main>
+	</div>
+
+  
+  <!-- Socket.IO client -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  
+  <script>
+    try {
+      window.socket = io();
+      window.socket.on('connect', () => console.log('[socket] connect id=', window.socket.id));
+      window.socket.on('connect_error', (e) => console.warn('[socket] connect_error', e));
+    } catch (e) {
+      console.warn('Socket.IO indisponible:', e);
+    }
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+    <!-- Le pied de page -->
+	<footer>
+        Projet réalisé par : Rashid, Mohamed et Dolorès, et Joel | 2MAR210 A2025 : Marketing Digital | UQAC | Automne 2025
+	</footer>
+
+</html>

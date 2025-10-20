@@ -60,7 +60,13 @@
 
     // Connexion Socket.IO au backend Render
     const socket = io(RENDER_BASE, { transports: ["websocket", "polling"] });
-
+    socket.on('connect', () => console.log('[SOCKET] connecté', socket.id));
+    socket.on('connect_error', (e) => console.error('[SOCKET] erreur', e));
+    
+    # logguer la réponse du fetch pour vérifier le 200 :
+    const res = await fetch(`${RENDER_BASE}/api/chat`, {...});
+    console.log('POST /api/chat status', res.status);
+    
     const form = document.getElementById('chat-form');
     const btn  = document.getElementById('send-btn');
     const st   = document.getElementById('status');

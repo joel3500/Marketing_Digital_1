@@ -7,9 +7,23 @@ from database import db
 from peewee import fn
 from peewee import PostgresqlDatabase, SqliteDatabase
 import logging 
-
+from flask_cors import CORS
 
 app = Flask(__name__)
+# remplace <ton-user> et <ton-repo> par tes valeurs
+PAGES_ORIGINS = [
+    "https://joel3500.github.io",
+    "https://joel3500.github.io/Marketing_Digital_1.git"
+]
+CORS(
+    app,
+    resources={r"/api/*": {"origins": PAGES_ORIGINS},
+               r"/post":   {"origins": PAGES_ORIGINS}},
+    supports_credentials=False,
+    allow_headers=["Content-Type"],
+    methods=["GET","POST","OPTIONS"]
+)
+
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
 
 # SocketIO, compatible avec eventlet / gevent / threading. En prod: worker eventlet.

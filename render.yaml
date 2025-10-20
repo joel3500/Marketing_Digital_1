@@ -3,8 +3,6 @@ services:
     name: marketing-chat
     env: docker
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn -k eventlet -w 1 -b 0.0.0.0:$PORT app:app
     dockerfilePath: ./Dockerfile
     envVars:
       - key: SECRET_KEY
@@ -13,6 +11,8 @@ services:
         fromDatabase:
           name: marketing_chat_p
           property: connectionString
+
 databases:
   - name: marketing_chat_p
-    plan: basic-256mb   # <-- fais correspondre au plan actuel de la DB
+    plan: basic-256mb
+   # <-- fais correspondre au plan actuel de la DB

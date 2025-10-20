@@ -14,4 +14,4 @@ services:
           property: connectionString
 databases:
   - name: marketing_chat_p
-    plan: free
+    plan: basic-256mb   # <-- fais correspondre au plan actuel de la DB

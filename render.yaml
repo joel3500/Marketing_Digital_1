@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: marketing_digital_1
+    name: marketing-chat
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt

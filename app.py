@@ -13,7 +13,7 @@ app = Flask(__name__)
 
 PAGES_ORIGINS = [
     "https://joel3500.github.io",
-    "https://joel3500.github.io/Marketing_Digital_1.git"
+    "https://joel3500.github.io/Marketing_Digital_1/"
 ]
 CORS(
     app,

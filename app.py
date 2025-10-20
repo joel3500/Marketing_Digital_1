@@ -10,9 +10,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
 
 # SocketIO, compatible avec eventlet / gevent / threading. En prod: worker eventlet.
-# socketio = SocketIO(app, cors_allowed_origins="*")
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="gevent")
-
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 MAX_MESSAGES = 50
 

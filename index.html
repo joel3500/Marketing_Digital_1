@@ -3,112 +3,119 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Les Responsables Marketing — Chat en temps réel</title>
+  <title>Chat avec les Responsables Marketing</title>
 
-  <!-- Ton CSS statique (facultatif) -->
-  <link rel="stylesheet" href="static/css/style.css" />
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#f6f7fb; margin:0; }
-    .container { max-width: 920px; margin: 40px auto; background:#fff; border-radius:16px; padding:24px 28px; box-shadow: 0 8px 24px rgba(0,0,0,.06); }
-    h1 { margin-top:0; }
-    .row { margin-bottom:12px; }
-    input, textarea { width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:10px; outline: none; }
-    button { background:#2563eb; color:#fff; border:none; padding:10px 16px; border-radius:10px; cursor:pointer; }
-    button:hover { opacity:.95; }
-    .le_chat { margin-top:18px; border-top:1px solid #eee; padding-top:12px; }
-    .msg { padding:8px 0; border-bottom:1px dashed #eee; }
-    .msg:last-child { border-bottom:none; }
-  </style>
+  <!-- Google Fonts -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poppins|Sofia|Trirong|Audiowide">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poppins&effect=fire|neon|outline|emboss|shadow-multiple">
+
+  <!-- Ton CSS -->
+  <link rel="stylesheet" href="static/style.css">
 
   <!-- Socket.IO client -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h1>Les Responsables Marketing — Chat en temps réel</h1>
 
-    <!-- Formulaire d’envoi -->
-    <div class="poster_un_chat">
-      <div class="row">
-        <input id="prenom" type="text" placeholder="Alice" />
-      </div>
-      <div class="row">
-        <input id="filiaire" type="text" placeholder="Arts et Lettres" />
-      </div>
-      <div class="row">
-        <textarea id="commentaire" rows="4" placeholder="Coool ! c'est super d'avoir de quoi interagir avec les responsables :)"></textarea>
-      </div>
-      <button id="envoyer">Envoyer</button>
-    </div>
+  <h2> Les Responsables Marketing <br><br> GYMNASE INTELLIGENT A DOMICILE </h2>
 
-    <!-- Zone d’affichage du chat -->
-    <div class="le_chat" id="le_chat">
-      <em>Aucun message pour le moment — lance la discussion !</em>
-    </div>
+  <!-- Bandeau image (ton CSS s’occupe du fond) -->
+  <header class="header_avec_image"></header>
+
+  <div class="grand_cadre_du_chat">
+    <main class="container">
+      <!-- poster_un_chat -->
+      <div class="poster_un_chat">
+        <!-- IMPORTANT : action absolue pour fallback sans JS -->
+        <form id="chat-form" class="chat-form" action="https://marketing-chat.onrender.com/post" method="post">
+          <div class="row">
+            <label for="prenom">Prénom</label>
+            <input type="text" id="prenom" name="prenom" placeholder="Alice" required>
+          </div>
+          <div class="row">
+            <label for="filiaire">Filière</label>
+            <input type="text" id="filiaire" name="filiaire" placeholder="Arts et Lettres" required>
+          </div>
+          <div class="row">
+            <label for="commentaire">Commentaire</label>
+            <textarea id="commentaire" name="commentaire" placeholder="Coool ! c'est super d'avoir de quoi interagir avec les responsables :)" required></textarea>
+          </div>
+          <button id="send-btn" type="submit">Envoyer</button>
+          <span id="status" class="status" aria-live="polite"></span>
+        </form>
+      </div>
+
+      <hr>
+
+      <!-- le_chat -->
+      <div class="le_chat" id="le_chat">
+        <p class="empty">Aucun message pour le moment — lance la discussion !</p>
+      </div>
+    </main>
   </div>
 
   <script>
-    // 1) Connecte-toi à ton backend Render (remplace par ton URL si différente)
-    const socket = io("https://marketing-chat.onrender.com", {
-      transports: ["websocket", "polling"] // fallback OK
+    // Ton backend Render
+    const RENDER_BASE = "https://marketing-chat.onrender.com";
+
+    // Connexion Socket.IO au backend Render
+    const socket = io(RENDER_BASE, { transports: ["websocket", "polling"] });
+
+    const form = document.getElementById('chat-form');
+    const btn  = document.getElementById('send-btn');
+    const st   = document.getElementById('status');
+    const chat = document.getElementById('le_chat');
+
+    // Reçoit les nouveaux messages (événement émis par ton serveur)
+    socket.on('chat:new', (msg) => {
+      const empty = chat.querySelector('.empty');
+      if (empty) empty.remove();
+      const line = document.createElement('div');
+      line.className = 'chat-line';
+      line.innerHTML = `<strong>${escapeHtml(msg.prenom)}</strong> ( <em>${escapeHtml(msg.filiaire)}</em> ) : ${escapeHtml(msg.commentaire)}`;
+      chat.prepend(line);
     });
 
-    const $prenom = document.getElementById("prenom");
-    const $filiaire = document.getElementById("filiaire");
-    const $commentaire = document.getElementById("commentaire");
-    const $envoyer = document.getElementById("envoyer");
-    const $chat = document.getElementById("le_chat");
-
-    // 2) Envoi d’un message (adapter l’event name à ton backend: 'chat:new' par ex.)
-    $envoyer.addEventListener("click", () => {
-      const prenom = ($prenom.value || "").trim();
-      const filiaire = ($filiaire.value || "").trim();
-      const commentaire = ($commentaire.value || "").trim();
-      if (!prenom || !filiaire || !commentaire) return;
-
-      socket.emit("chat:new", { prenom, filiaire, commentaire }); // <--- event côté serveur
-      $commentaire.value = "";
-    });
-
-    // 3) Réception en temps réel et rendu
-    function renderMessage({ prenom, filiaire, commentaire }) {
-      if (!prenom || !filiaire || !commentaire) return;
-      if ($chat.firstElementChild && $chat.firstElementChild.tagName === "EM") $chat.innerHTML = "";
-
-      const row = document.createElement("div");
-      row.className = "msg";
-      // Format: Prenom (Filiaire) : Commentaire
-      row.innerHTML = `<strong>${escapeHtml(prenom)}</strong> (<em>${escapeHtml(filiaire)}</em>) : ${escapeHtml(commentaire)}`;
-      // Ajout en haut (ordre descendant)
-      $chat.prepend(row);
-    }
-
-    // 3a) Écoute l’event broadcasté par le serveur (adapter le nom, ex. 'chat:broadcast')
-    socket.on("chat:broadcast", (payload) => {
-      renderMessage(payload);
-    });
-
-    // 4) Option: récupérer l’historique au chargement (si tu as un endpoint /api/chat)
-    fetch("https://marketing-chat.onrender.com/api/chat")
-      .then(r => r.json())
-      .then(list => {
-        // on suppose que l’API renvoie la liste du plus récent au plus ancien
-        if (Array.isArray(list)) {
-          $chat.innerHTML = "";
-          list.forEach(renderMessage);
+    // Envoi via l’API JSON de Render (sans rechargement)
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      st.textContent = 'Envoi...';
+      const payload = {
+        prenom: document.getElementById('prenom').value.trim(),
+        filiaire: document.getElementById('filiaire').value.trim(),
+        commentaire: document.getElementById('commentaire').value.trim()
+      };
+      try {
+        const res = await fetch(`${RENDER_BASE}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(()=>({error:'Erreur'}));
+          throw new Error(data.error || ('HTTP ' + res.status));
         }
-      })
-      .catch(() => { /* ignore si l’API n’existe pas */ });
+        form.reset();
+        st.textContent = 'Envoyé ✔';
+      } catch (err) {
+        st.textContent = 'Erreur: ' + err.message;
+      } finally {
+        btn.disabled = false;
+        setTimeout(()=> st.textContent = '', 2000);
+      }
+    });
 
-    // Petite fonction pour éviter les injections dans le HTML
-    function escapeHtml(s) {
-      return String(s)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll('&', '&amp;').replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;').replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
     }
   </script>
+
+  <footer>
+    Projet réalisé par : Rashid, Mohamed et Dolorès, et Joel | 2MAR210 A2025 : Marketing Digital | UQAC | Automne 2025
+  </footer>
 </body>
 </html>

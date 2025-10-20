@@ -43,3 +43,4 @@ Thumbs.db
 # --- Front optionnel ---
 node_modules/
 staticfiles/
+.git

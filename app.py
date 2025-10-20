@@ -1,3 +1,4 @@
+from logging import log
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_socketio import SocketIO
@@ -5,6 +6,8 @@ from models import ChatMessage
 from database import db
 from peewee import fn
 from peewee import PostgresqlDatabase, SqliteDatabase
+import logging 
+
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
@@ -14,10 +17,22 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 MAX_MESSAGES = 50
 
-@app.before_request
-def ensure_tables():
-    db.create_tables([ChatMessage], safe=True)
+# Logs propres
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("marketing_chat")
 
+IS_PROD = os.getenv("APP_ENV") == "production" or os.getenv("RENDER") == "true"
+
+def init_schema_once():
+    with db:
+        try:
+            # safe=True évite l’exception si la table existe déjà
+            db.create_tables([ChatMessage], safe=True)
+            log.info("[DB] schema OK (tables créées si nécessaire)")
+        except Exception as e:
+            log.exception("[DB] init schema failed: %s", e)
+
+init_schema_once()
 
 def enforce_cap(max_rows=MAX_MESSAGES):
     """Garde au plus `max_rows` messages en supprimant les plus anciens."""
@@ -94,19 +109,50 @@ def post_form():
 # → Aller sur http://127.0.0.1:5000/debug/db et on saura.
 @app.get("/debug/db")
 def debug_db():
-    if isinstance(db, PostgresqlDatabase):
-        kind = "postgresql"
-        name = db.database
-        host = getattr(db, 'host', None)
-    elif isinstance(db, SqliteDatabase):
-        kind = "sqlite"
-        name = db.database  # chemin du fichier .db
-        host = None
-    else:
-        kind = type(db).__name__
-        name = getattr(db, 'database', None)
-        host = None
-    return jsonify({"backend": kind, "database": name, "host": host})
+    from database import db
+    backend = type(db).__name__
+
+    if IS_PROD:
+        # ----- PROD : lecture seule + logs -----
+        try:
+            version = db.execute_sql("select version()").fetchone()[0]
+            total = ChatMessage.select(fn.COUNT(ChatMessage.id)).scalar() or 0
+            log.info("[DEBUG/DB] backend=%s, version=%s, total_rows=%s", backend, version, total)
+            return jsonify({
+                "ok": True,
+                "env": "production",
+                "backend": backend,
+                "version": version,
+                "rows": total
+            })
+        except Exception as e:
+            log.exception("[DEBUG/DB] prod error: %s", e)
+            return jsonify({"ok": False, "env": "production", "backend": backend, "error": str(e)}), 500
+
+    # ----- LOCAL : version actuelle (détaillée) -----
+    try:
+        if isinstance(db, PostgresqlDatabase):
+            kind = "postgresql"; name = db.database; host = getattr(db, "host", None)
+        elif isinstance(db, SqliteDatabase):
+            kind = "sqlite"; name = db.database; host = None
+        else:
+            kind = type(db).__name__; name = getattr(db, "database", None); host = None
+
+        version = db.execute_sql("select version()").fetchone()[0]
+        total = ChatMessage.select(fn.COUNT(ChatMessage.id)).scalar() or 0
+        log.info("[DEBUG/DB] kind=%s, version=%s, total_rows=%s", kind, version, total)
+        return jsonify({
+            "ok": True,
+            "env": "development",
+            "backend": kind,
+            "database": name,
+            "host": host,
+            "version": version,
+            "rows": total
+        })
+    except Exception as e:
+        log.exception("[DEBUG/DB] local error: %s", e)
+        return jsonify({"ok": False, "env": "development", "backend": backend, "error": str(e)}), 500
 
 
 if __name__ == "__main__":

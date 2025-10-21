@@ -53,9 +53,6 @@
       </div>
     </main>
   </div>
-  
-  <!-- Socket.IO client (si pas déjà inclus plus haut) -->
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
   <script>
     // Ton backend Render
@@ -66,6 +63,31 @@
       transports: ["websocket", "polling"] 
     });
 
+    // ---- Réveil + Historique au chargement (CONNECTION DIRECTE DES L'OUVERTURE DE LA PAGE)----
+    async function warmAndLoad() {
+      try {
+        // 1) Ping (réveille l’instance + DB)
+        await fetch(`${RENDER_BASE}/api/health`, { method: "GET" });
+        
+        // 2) Historique (si ton API GET /api/chat existe et renvoie la liste)
+        const r = await fetch(`${RENDER_BASE}/api/chat`, { method: "GET" });
+        if (r.ok) {
+          const list = await r.json();
+          if (Array.isArray(list)) {
+            // on suppose le plus récent en premier ; sinon, inverse
+            list.forEach(renderMessage);
+          }
+        }
+      } catch (e) {
+        // Instance encore froide ? On réessaie dans 4s.
+        console.warn("[warm] retry in 4s", e);
+        setTimeout(warmAndLoad, 4000);
+      }
+    }
+    // Lance au premier rendu
+    document.addEventListener("DOMContentLoaded", warmAndLoad);
+
+    //-----------------  Fin de la connection Directe des l'ouverture de la page ( Processus normal èa present ).
     const form = document.getElementById('chat-form');
     const btn  = document.getElementById('send-btn');
     const st   = document.getElementById('status');
@@ -85,7 +107,7 @@
       chat.prepend(line);
     }
 
-    // 👉 Écoute l'événement envoyé par le serveur
+    // Écoute l'événement envoyé par le serveur
     socket.on("chat:new", (msg) => {
       renderMessage(msg);
     });
@@ -104,10 +126,9 @@
         .replaceAll("'", "&#039;");
     }
   </script>
-
+  
   <footer>
     Projet réalisé par : Rashid, Mohamed et Dolorès, et Joel | 2MAR210 A2025 : Marketing Digital | UQAC | Automne 2025
   </footer>
 </body>
 </html>
-

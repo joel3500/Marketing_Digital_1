@@ -45,7 +45,7 @@
         </form>
       </div>
 
-      <hr>
+      <hr><!-- ( La petite barre horizontale qui sert de séparateur ) -->
 
       <!-- le_chat -->
       <div class="le_chat" id="le_chat">
@@ -53,70 +53,55 @@
       </div>
     </main>
   </div>
+  
+  <!-- Socket.IO client (si pas déjà inclus plus haut) -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
   <script>
     // Ton backend Render
     const RENDER_BASE = "https://marketing-chat.onrender.com";
 
     // Connexion Socket.IO au backend Render
-    const socket = io(RENDER_BASE, { transports: ["websocket", "polling"] });
-    socket.on('connect', () => console.log('[SOCKET] connecté', socket.id));
-    socket.on('connect_error', (e) => console.error('[SOCKET] erreur', e));
-    
-    # logguer la réponse du fetch pour vérifier le 200 :
-    const res = await fetch(`${RENDER_BASE}/api/chat`, {...});
-    console.log('POST /api/chat status', res.status);
-    
+    const socket = io(RENDER_BASE, { 
+      transports: ["websocket", "polling"] 
+    });
+
     const form = document.getElementById('chat-form');
     const btn  = document.getElementById('send-btn');
     const st   = document.getElementById('status');
     const chat = document.getElementById('le_chat');
 
-    // Reçoit les nouveaux messages (événement émis par ton serveur)
-    socket.on('chat:new', (msg) => {
-      const empty = chat.querySelector('.empty');
+    // Rendu d'une ligne: Prenom (Filière) : Commentaire
+    function renderMessage({ prenom, filiaire, commentaire }) {
+      if (!prenom || !filiaire || !commentaire) return;
+
+      const empty = chat.querySelector(".empty");
       if (empty) empty.remove();
-      const line = document.createElement('div');
-      line.className = 'chat-line';
-      line.innerHTML = `<strong>${escapeHtml(msg.prenom)}</strong> ( <em>${escapeHtml(msg.filiaire)}</em> ) : ${escapeHtml(msg.commentaire)}`;
+
+      const line = document.createElement("div");
+      line.className = "chat-line";
+      line.innerHTML = `<strong>${escapeHtml(prenom)}</strong> (<em>${escapeHtml(filiaire)}</em>) : ${escapeHtml(commentaire)}`;
+      // Ajout en haut (ordre descendant)
       chat.prepend(line);
+    }
+
+    // 👉 Écoute l'événement envoyé par le serveur
+    socket.on("chat:new", (msg) => {
+      renderMessage(msg);
     });
 
-    // Envoi via l’API JSON de Render (sans rechargement)
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      btn.disabled = true;
-      st.textContent = 'Envoi...';
-      const payload = {
-        prenom: document.getElementById('prenom').value.trim(),
-        filiaire: document.getElementById('filiaire').value.trim(),
-        commentaire: document.getElementById('commentaire').value.trim()
-      };
-      try {
-        const res = await fetch(`${RENDER_BASE}/api/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(()=>({error:'Erreur'}));
-          throw new Error(data.error || ('HTTP ' + res.status));
-        }
-        form.reset();
-        st.textContent = 'Envoyé ✔';
-      } catch (err) {
-        st.textContent = 'Erreur: ' + err.message;
-      } finally {
-        btn.disabled = false;
-        setTimeout(()=> st.textContent = '', 2000);
-      }
-    });
+    // (optionnel) logs utiles
+    socket.on("connect", () => console.log("[SOCKET] connecté", socket.id));
+    socket.on("connect_error", (e) => console.error("[SOCKET] erreur", e));
 
-    function escapeHtml(str) {
-      return String(str)
-        .replaceAll('&', '&amp;').replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;').replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
+    // Protection simple anti-injection
+    function escapeHtml(s) {
+      return String(s)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
     }
   </script>
 
@@ -125,3 +110,4 @@
   </footer>
 </body>
 </html>
+

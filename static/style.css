@@ -39,7 +39,7 @@ button:hover { opacity: 0.95; }
     height: 270px;
     margin-left: 20%;
     background-image: url("image_principale.jpg");
-    background-position: center; /* Center the image */
+    background-position: right; /* Center the image */
     background-repeat: no-repeat;
     background-size: cover;
     border-radius : 20px;
